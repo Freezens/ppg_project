@@ -1,3 +1,10 @@
+"""
+
+train data set 시각화 및 peak 찾기 구현
+train data set 은 총 1000개, 각각 300개의 데이터를 가짐
+
+"""
+
 # pip install plotly
 import numpy as np
 import plotly.graph_objects as go
