@@ -51,6 +51,33 @@ def peaks_find(arr, prominence = 0):
 
     return peaks
 
+"""
+
+개선된 peak_find 함수.
+일정 간격으로 블록을 생성, 해당 블록 내에서의 최댓값을 구한 후,
+해당 값을 앞 뒤 블록의 최댓값과 비교하여 해당 값이 peak인지 아닌지 판단
+
+"""
+
+def peaks_find_2(arr, Block_size = 10):
+    max_in_block = [(0, arr[0])]
+    peaks = []
+    for i in range(1, len(arr), Block_size):
+        block = arr[i:i + Block_size]
+        max_val = max(block)
+        local_idx = np.argmax(block)
+        absolute_idx = i + local_idx  # 전체 배열 기준 인덱스
+        max_in_block.append((absolute_idx, max_val))
+        
+    max_in_block.append((len(arr)-1, arr[-1]))
+
+    for i in range(1, len(max_in_block)-1):
+        if max_in_block[i][1] >= max_in_block[i-1][1] and max_in_block[i][1] > max_in_block[i+1][1]:
+            peaks.append(max_in_block[i])
+
+    return peaks
+
+
 # Train data set 시각화 클래스. 해당 클래스의 run() 함수 사용.
 class TrainDataSet_Visualize:
     def __init__(self, file_path = 'ppg_train.npy'):
@@ -67,7 +94,7 @@ class TrainDataSet_Visualize:
 
     # peaks 찾기 및 총 peaks 수 출력 (나중에 완성되면 지울 것)
     def find_peaks(self):
-        self.peaks = [peaks_find(arr, 0) for arr in self.flatten_data]
+        self.peaks = [peaks_find_2(arr, 5) for arr in self.flatten_data]
         print(sum(len(peaks) for peaks in self.peaks))
 
     # 시각화 함수
