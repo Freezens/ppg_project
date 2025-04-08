@@ -56,10 +56,11 @@ def peaks_find(arr, prominence = 0):
 개선된 peak_find 함수.
 일정 간격으로 블록을 생성, 해당 블록 내에서의 최댓값을 구한 후,
 해당 값을 앞 뒤 블록의 최댓값과 비교하여 해당 값이 peak인지 아닌지 판단
+세 값의 평균과 일정수치 이상 차이나지 않으면 peak가 아닌것으로 간주
 
 """
 
-def peaks_find_2(arr, Block_size = 10):
+def peaks_find_2(arr, Block_size = 10, prominence = 0.3):
     max_in_block = [(0, arr[0])]
     peaks = []
     for i in range(1, len(arr), Block_size):
@@ -72,7 +73,7 @@ def peaks_find_2(arr, Block_size = 10):
     max_in_block.append((len(arr)-1, arr[-1]))
 
     for i in range(1, len(max_in_block)-1):
-        if max_in_block[i][1] >= max_in_block[i-1][1] and max_in_block[i][1] > max_in_block[i+1][1]:
+        if max_in_block[i][1] >= max_in_block[i-1][1] and max_in_block[i][1] > max_in_block[i+1][1] and (max_in_block[i][1] - ((max_in_block[i][1]+max_in_block[i-1][1]+max_in_block[i+1][1])/3)) > prominence:
             peaks.append(max_in_block[i])
 
     return peaks
