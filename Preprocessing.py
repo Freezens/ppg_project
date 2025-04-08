@@ -94,7 +94,7 @@ class TrainDataSet_Visualize:
 
     # peaks 찾기 및 총 peaks 수 출력 (나중에 완성되면 지울 것)
     def find_peaks(self):
-        self.peaks = [peaks_find_2(arr, 5) for arr in self.flatten_data]
+        self.peaks = [peaks_find_2(arr, 10) for arr in self.flatten_data]
         print(sum(len(peaks) for peaks in self.peaks))
 
     # 시각화 함수
