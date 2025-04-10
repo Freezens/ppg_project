@@ -55,26 +55,28 @@ def peaks_find(arr, prominence = 0):
 
 개선된 peak_find 함수.
 일정 간격으로 블록을 생성, 해당 블록 내에서의 최댓값을 구한 후,
-해당 값을 앞 뒤 블록의 최댓값과 비교하여 해당 값이 peak인지 아닌지 판단
-세 값의 평균과 일정수치 이상 차이나지 않으면 peak가 아닌것으로 간주
+각 블록의 평균값을 앞 뒤 블록과 비교하여 해당 값이 peak인지 아닌지 판단
+양 블록과 일정수치 이상 차이나지 않으면 peak가 아닌것으로 간주
 
 """
 
-def peaks_find_2(arr, Block_size = 10, prominence = 0.3):
-    max_in_block = [(0, arr[0])]
+def peaks_find_2(arr, Block_size = 10, prominence = 0.5):
+    max_in_block = [(0, arr[0], arr[0])]
     peaks = []
     for i in range(1, len(arr), Block_size):
         block = arr[i:i + Block_size]
         max_val = max(block)
+        avg_val = np.mean(block)
         local_idx = np.argmax(block)
         absolute_idx = i + local_idx  # 전체 배열 기준 인덱스
-        max_in_block.append((absolute_idx, max_val))
+        max_in_block.append((absolute_idx, max_val, avg_val))
         
-    max_in_block.append((len(arr)-1, arr[-1]))
+    max_in_block.append((len(arr)-1, arr[-1], arr[-1]))
 
     for i in range(1, len(max_in_block)-1):
-        if max_in_block[i][1] >= max_in_block[i-1][1] and max_in_block[i][1] > max_in_block[i+1][1] and (max_in_block[i][1] - ((max_in_block[i][1]+max_in_block[i-1][1]+max_in_block[i+1][1])/3)) > prominence:
-            peaks.append(max_in_block[i])
+        if max_in_block[i][2] >= max_in_block[i-1][2] and max_in_block[i][2] > max_in_block[i+1][2] and (2*max_in_block[i][2] - (max_in_block[i-1][2]+max_in_block[i+1][2]))/2 > prominence:
+            if max_in_block[i][0]>=3:
+                peaks.append((max_in_block[i][0], max_in_block[i][1]))
 
     return peaks
 
@@ -95,7 +97,7 @@ class TrainDataSet_Visualize:
 
     # peaks 찾기 및 총 peaks 수 출력 (나중에 완성되면 지울 것)
     def find_peaks(self):
-        self.peaks = [peaks_find_2(arr, 10) for arr in self.flatten_data]
+        self.peaks = [peaks_find_2(arr, 5) for arr in self.flatten_data]
         print(sum(len(peaks) for peaks in self.peaks))
 
     # 시각화 함수
