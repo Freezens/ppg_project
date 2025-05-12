@@ -28,39 +28,18 @@ def load_data_npy(file_path):
 
 """
 
-peak_find() 함수.
-이웃한 값 간의 차이가 굉장히 작아 기본적인 peak_find 방식으로는 peak를 찾기 어려움.
-이를 해결할 함수 구현. 아래는 기본적인 peak_find 함수.
-반환형은 (x, y) 쌍의 배열 
-
-"""
-
-def peaks_find(arr, prominence = 0):
-    peaks = []
-
-    for i in range(1, len(arr) - 1):
-        if arr[i-1] < arr[i] > arr[i+1]:
-            left_base = max(arr[:i]) if i > 0 else arr[i]
-            right_base = max(arr[i+1:]) if i < len(arr)-1 else arr[i]
-            reference_level = max(left_base, right_base)
-
-            peak_prominence = arr[i] - reference_level
-
-            if peak_prominence >= prominence:
-                peaks.append((i, arr[i]))
-
-    return peaks
-
-"""
 
 개선된 peak_find 함수.
 일정 간격으로 블록을 생성, 해당 블록 내에서의 최댓값을 구한 후,
 각 블록의 평균값을 앞 뒤 블록과 비교하여 해당 값이 peak인지 아닌지 판단
 양 블록과 일정수치 이상 차이나지 않으면 peak가 아닌것으로 간주
 
+peaks가 5개 이상 찾아지지 않는 경우 None을 반환하고 훈련에 사용하지 않음
+- 불확실한 데이터는 제거
+
 """
 
-def peaks_find_2(arr, Block_size = 10, prominence = 0.5):
+def peaks_find(arr, Block_size = 10, prominence = 0.5):
     max_in_block = [(0, arr[0], arr[0])]
     peaks = []
     for i in range(1, len(arr), Block_size):
@@ -78,14 +57,18 @@ def peaks_find_2(arr, Block_size = 10, prominence = 0.5):
             if max_in_block[i][0]>=3:
                 peaks.append((max_in_block[i][0], max_in_block[i][1]))
 
-    return peaks
+    if len(peaks) >= 5:
+        peaks = sorted(peaks, key=lambda x: x[1], reverse=True)[:5]
+        return peaks
+
+    else: return None
 
 
 # Train data set 시각화 클래스. 해당 클래스의 run() 함수 사용.
 class TrainDataSet_Visualize:
-    def __init__(self, file_path = 'ppg_train.npy'):
+    def __init__(self, file_path = 'ppg_classification.npy'):
         self.file_path = file_path  # 파일 이름 수정 필요시 해당 부분 수정
-        self.split_size = 300       # 샘플 별로 나누는 크기 수정 필요 시 해당 부분 수정
+        self.split_size = 600       # 샘플 별로 나누는 크기 수정 필요 시 해당 부분 수정
         self.split_array = []       # split 된 데이터 저장
         self.flatten_data = []      # flatten 된 데이터 저장
         self.peaks = []             # peaks_find() 함수를 이용해 뽑아낸 peaks들 저장
@@ -97,7 +80,7 @@ class TrainDataSet_Visualize:
 
     # peaks 찾기 및 총 peaks 수 출력 (나중에 완성되면 지울 것)
     def find_peaks(self):
-        self.peaks = [peaks_find_2(arr, 5) for arr in self.flatten_data]
+        self.peaks = [peaks_find(arr, 5) for arr in self.flatten_data]
         print(sum(len(peaks) for peaks in self.peaks))
 
     # 시각화 함수
