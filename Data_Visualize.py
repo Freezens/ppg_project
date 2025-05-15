@@ -1,6 +1,6 @@
 """
 
-test data set 의 시각화 구현 코드
+test data set, train data set 의 시각화 구현 코드
 peak_find()는 들어있지 않음
 
 """
@@ -8,6 +8,7 @@ peak_find()는 들어있지 않음
 
 # pip install plotly
 import plotly.graph_objects as go
+import numpy as np
 
 # .txt 데이터 파일 불러오기
 def load_data_txt(file_path, HZ):
@@ -16,6 +17,11 @@ def load_data_txt(file_path, HZ):
     x = [i / HZ for i in range(len(data))]
 
     return data, x
+
+def load_data_npy(file_path, data_size):
+    data = np.load(file_path)
+
+    return data
 
 # Test Set 시각화 클래스
 class TestSetVisualizer:
@@ -103,6 +109,16 @@ class TestSetVisualizer:
         self.select_file_index()
         self.load_data()
         self.plot()
+
+class TrainSetVisualizer:
+    def __init__(self):
+        self.file_path = "ppg_classification.npy"
+        self.sample_rate = 100
+
+        self.arr = []
+
+    def load_data():
+        
 
 
 if __name__ == "__main__":
