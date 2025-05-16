@@ -114,13 +114,111 @@ class TrainSetVisualizer:
     def __init__(self):
         self.file_path = "ppg_classification.npy"
         self.sample_rate = 100
+        self.segment_size = 6000
+        self.x = np.arange(self.segment_size) / self.sample_rate
 
-        self.arr = []
+        self.arr1 = []  # 정상 환자 data (10명)
+        self.arr2 = []  # 부정맥 환자 data
 
-    def load_data():
-        
+    def load_data(self):
+        data = np.load(self.file_path)
+        self.arr1 = data[:10, :]   # shape (10, 30000)
+        self.arr2 = data[10:, :]   # shape (40, 30000)
+
+    def slicing_data(self):
+        num_segments = 5  # 30000 / 6000
+        segments_1 = []
+        segments_2 = []
+
+        for i in range(num_segments):
+            start = i * self.segment_size
+            end = start + self.segment_size
+            segments_1.append(self.arr1[:, start:end])  # shape (10, 6000)
+            segments_2.append(self.arr2[:, start:end])  # shape (40, 6000)
+
+        self.arr1 = segments_1  # → list of 2D arrays
+        self.arr2 = segments_2
+
+    def get_segment(self, group: str, segment_idx: int, row_idx: int):
+        """
+        group: 'normal' or 'abnormal'
+        segment_idx: 0~4
+        row_idx: 환자 인덱스 (0~9 for normal, 0~39 for abnormal)
+        """
+        if group == 'normal':
+            return self.x, self.arr1[segment_idx][row_idx]
+        else:
+            return self.x, self.arr2[segment_idx][row_idx]
+
+    def plot(self):
+        fig = go.Figure()
+
+        # 기본 표시: 정상 환자 0번, 세그먼트 0
+        x, y = self.get_segment(group='normal', segment_idx=0, row_idx=0)
+
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            mode='lines+markers',
+            marker=dict(size=4),
+            name="Normal Segment 0 - Patient 0"
+        ))
+
+        # 드롭다운 버튼 생성: 정상 환자 0~9, 세그먼트 0~4
+        dropdown_buttons = []
+
+        for s in range(len(self.arr1)):  # segment index
+            for r in range(self.arr1[0].shape[0]):  # row index (환자)
+                x_seg, y_seg = self.get_segment('normal', s, r)
+                dropdown_buttons.append({
+                    "args": [{"x": [x_seg], "y": [y_seg]}],
+                    "label": f"Normal: Patient {1+r+s*10}",
+                    "method": "update"
+                })
+
+        # 부정맥 환자도 추가하려면 아래를 참고
+        for s in range(len(self.arr2)):
+            for r in range(self.arr2[0].shape[0]):
+                x_seg, y_seg = self.get_segment('abnormal', s, r)
+                dropdown_buttons.append({
+                    "args": [{"x": [x_seg], "y": [y_seg]}],
+                    "label": f"Abnormal: Patient {1+r+s*10}",
+                    "method": "update"
+                })
+
+        fig.update_layout(
+            title="100Hz Sampled PPG Data (Normal Patients)",
+            xaxis_title="Time (seconds)",
+            yaxis_title="PPG Value",
+            xaxis=dict(
+                rangeslider=dict(visible=True),
+                type="linear"
+            ),
+            width=3000,
+            height=500,
+            updatemenus=[
+                {
+                    "buttons": dropdown_buttons,
+                    "direction": "down",
+                    "showactive": True,
+                    "x": 0.1,
+                    "xanchor": "left",
+                    "y": 1.15,
+                    "yanchor": "top"
+                }
+            ]
+        )
+        return fig
+
+    def run(self):
+        self.load_data()
+        self.slicing_data()
+        fig = self.plot()
+        fig.show()
+
+
 
 
 if __name__ == "__main__":
-    visualizer = TestSetVisualizer()
+    visualizer = TrainSetVisualizer()
     visualizer.run()
