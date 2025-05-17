@@ -7,8 +7,10 @@ peak_find()는 들어있지 않음
 
 
 # pip install plotly
+import plotly as plt
 import plotly.graph_objects as go
 import numpy as np
+from scipy.signal import resample
 
 # .txt 데이터 파일 불러오기
 def load_data_txt(file_path, HZ):
@@ -117,13 +119,42 @@ class TrainSetVisualizer:
         self.segment_size = 6000
         self.x = np.arange(self.segment_size) / self.sample_rate
 
-        self.arr1 = []  # 정상 환자 data (10명)
+        self.arr1 = []  # 정상 환자 data
         self.arr2 = []  # 부정맥 환자 data
+
+        self.normal_segments_resampled = []
+        self.abnormal_segments_resampled = []
+    
+    def peaks_find(self, arr, Block_size = 10, prominence = 3):
+        max_in_block = [(0, arr[0], arr[0])]
+        peaks = []
+        for i in range(1, len(arr), Block_size):
+            block = arr[i:i + Block_size]
+            max_val = max(block)
+            avg_val = np.mean(block)
+            local_idx = np.argmax(block)
+            absolute_idx = i + local_idx  # 전체 배열 기준 인덱스
+            max_in_block.append((absolute_idx, max_val, avg_val))
+            
+        max_in_block.append((len(arr)-1, arr[-1], arr[-1]))
+
+        for i in range(1, len(max_in_block)-1):
+            if max_in_block[i][2] >= max_in_block[i-1][2] and max_in_block[i][2] > max_in_block[i+1][2] and (2*max_in_block[i][2] - (max_in_block[i-1][2]+max_in_block[i+1][2]))/2 > prominence:
+                if max_in_block[i][0]>=3:
+                    peaks.append((max_in_block[i][0], max_in_block[i][1]))
+
+        return peaks
+    
+    def get_peaks(self, y_values):
+        peaks = self.peaks_find(y_values)
+        peak_x = [self.x[p[0]] for p in peaks]
+        peak_y = [p[1] for p in peaks]
+        return peak_x, peak_y
 
     def load_data(self):
         data = np.load(self.file_path)
         self.arr1 = data[:10, :]   # shape (10, 30000)
-        self.arr2 = data[10:, :]   # shape (40, 30000)
+        self.arr2 = data[10:, :]   # shape (10, 30000)
 
     def slicing_data(self):
         num_segments = 5  # 30000 / 6000
@@ -133,8 +164,8 @@ class TrainSetVisualizer:
         for i in range(num_segments):
             start = i * self.segment_size
             end = start + self.segment_size
-            segments_1.append(self.arr1[:, start:end])  # shape (10, 6000)
-            segments_2.append(self.arr2[:, start:end])  # shape (40, 6000)
+            segments_1.append(self.arr1[:, start:end])
+            segments_2.append(self.arr2[:, start:end])
 
         self.arr1 = segments_1  # → list of 2D arrays
         self.arr2 = segments_2
@@ -149,12 +180,49 @@ class TrainSetVisualizer:
             return self.x, self.arr1[segment_idx][row_idx]
         else:
             return self.x, self.arr2[segment_idx][row_idx]
+        
+    def resampling_data(self):
+
+        for group_name, data_group in [('normal', self.arr1), ('abnormal', self.arr2)]:
+            resampled_group = []
+
+            for segment in data_group:  # segment: shape (10, 6000)
+                for patient_idx in range(segment.shape[0]):
+                    y = segment[patient_idx]
+                    peaks = self.peaks_find(y)
+
+                    # 최소 5개 이상 피크가 있어야 처리 가능
+                    if len(peaks) < 5:
+                        continue
+
+                    # 피크 인덱스만 추출
+                    peak_indices = [p[0] for p in peaks]
+
+                    # 5개씩 슬라이딩 윈도우로 구간을 선택
+                    for i in range(len(peak_indices) - 4):
+                        start_idx = peak_indices[i]
+                        end_idx = peak_indices[i + 4]
+
+                        if end_idx - start_idx < 10:  # 너무 짧은 경우 무시
+                            continue
+
+                        segment_slice = y[start_idx:end_idx + 1]
+                        # 100개로 리샘플링
+                        resampled = resample(segment_slice, 100)
+                        resampled_group.append(resampled)
+
+            if group_name == 'normal':
+                self.normal_segments_resampled = resampled_group
+            else:
+                self.abnormal_segments_resampled = resampled_group
 
     def plot(self):
         fig = go.Figure()
 
         # 기본 표시: 정상 환자 0번, 세그먼트 0
         x, y = self.get_segment(group='normal', segment_idx=0, row_idx=0)
+        peak_x, peak_y = self.get_peaks(y)
+
 
         fig.add_trace(go.Scatter(
             x=x,
@@ -164,30 +232,48 @@ class TrainSetVisualizer:
             name="Normal Segment 0 - Patient 0"
         ))
 
-        # 드롭다운 버튼 생성: 정상 환자 0~9, 세그먼트 0~4
+         # 피크
+        fig.add_trace(go.Scatter(
+            x=peak_x,
+            y=peak_y,
+            mode='markers',
+            marker=dict(size=8, color='red'),
+            name='Peaks'
+        ))
+
+        # 드롭다운 버튼 생성
         dropdown_buttons = []
 
-        for s in range(len(self.arr1)):  # segment index
-            for r in range(self.arr1[0].shape[0]):  # row index (환자)
+        # 정상 환자
+        for s in range(len(self.arr1)):
+            for r in range(self.arr1[0].shape[0]):
                 x_seg, y_seg = self.get_segment('normal', s, r)
+                peak_x, peak_y = self.get_peaks(y_seg)
                 dropdown_buttons.append({
-                    "args": [{"x": [x_seg], "y": [y_seg]}],
-                    "label": f"Normal: Patient {1+r+s*10}",
+                    "args": [
+                        {"x": [x_seg, peak_x],
+                         "y": [y_seg, peak_y]}
+                    ],
+                    "label": f"Normal: Patient {1 + r + s * 10}",
                     "method": "update"
                 })
 
-        # 부정맥 환자도 추가하려면 아래를 참고
+        # 부정맥 환자
         for s in range(len(self.arr2)):
             for r in range(self.arr2[0].shape[0]):
                 x_seg, y_seg = self.get_segment('abnormal', s, r)
+                peak_x, peak_y = self.get_peaks(y_seg)
                 dropdown_buttons.append({
-                    "args": [{"x": [x_seg], "y": [y_seg]}],
-                    "label": f"Abnormal: Patient {1+r+s*10}",
+                    "args": [
+                        {"x": [x_seg, peak_x],
+                         "y": [y_seg, peak_y]}
+                    ],
+                    "label": f"Abnormal: Patient {1 + r + s * 10}",
                     "method": "update"
                 })
 
         fig.update_layout(
-            title="100Hz Sampled PPG Data (Normal Patients)",
+            title="100Hz Sampled PPG Data with Peak Detection",
             xaxis_title="Time (seconds)",
             yaxis_title="PPG Value",
             xaxis=dict(
@@ -196,26 +282,92 @@ class TrainSetVisualizer:
             ),
             width=3000,
             height=500,
-            updatemenus=[
-                {
-                    "buttons": dropdown_buttons,
-                    "direction": "down",
-                    "showactive": True,
-                    "x": 0.1,
-                    "xanchor": "left",
-                    "y": 1.15,
-                    "yanchor": "top"
-                }
-            ]
+            updatemenus=[{
+                "buttons": dropdown_buttons,
+                "direction": "down",
+                "showactive": True,
+                "x": 0.1,
+                "xanchor": "left",
+                "y": 1.15,
+                "yanchor": "top"
+            }]
         )
         return fig
+
+    def plot_resampled(self):
+        fig = go.Figure()
+
+        # 기본 표시: 정상 리샘플링 데이터 첫 번째
+        x = np.arange(100)
+        y = self.normal_segments_resampled[0] if self.normal_segments_resampled else np.zeros(100)
+
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            mode='lines+markers',
+            marker=dict(size=4),
+            name="Resampled Normal Segment 0"
+        ))
+
+        dropdown_buttons = []
+
+        # 정상 세그먼트
+        for i, seg in enumerate(self.normal_segments_resampled):
+            dropdown_buttons.append({
+                "args": [{"y": [seg], "x": [x]}],
+                "label": f"Normal {i}",
+                "method": "update"
+            })
+
+        # 부정맥 세그먼트
+        for i, seg in enumerate(self.abnormal_segments_resampled):
+            dropdown_buttons.append({
+                "args": [{"y": [seg], "x": [x]}],
+                "label": f"Abnormal {i}",
+                "method": "update"
+            })
+
+        fig.update_layout(
+            title="Resampled PPG Segments (Heartbeat-normalized)",
+            xaxis_title="Normalized Time (0 ~ 100 samples)",
+            yaxis_title="PPG Value",
+            xaxis=dict(
+                range=[0, 100],
+                type="linear"
+            ),
+            width=1000,
+            height=400,
+            updatemenus=[{
+                "buttons": dropdown_buttons,
+                "direction": "down",
+                "showactive": True,
+                "x": 0.1,
+                "xanchor": "left",
+                "y": 1.2,
+                "yanchor": "top"
+            }]
+        )
+
+        return fig
+
+    def save_data(self, normal_path='resampled_normal.npy', abnormal_path='resampled_abnormal.npy'):
+
+        normal_array = np.array(self.normal_segments_resampled)
+        abnormal_array = np.array(self.abnormal_segments_resampled)
+
+        np.save(normal_path, normal_array)
+        np.save(abnormal_path, abnormal_array)
+
 
     def run(self):
         self.load_data()
         self.slicing_data()
-        fig = self.plot()
-        fig.show()
-
+        self.resampling_data()
+        self.save_data()
+        #print(len(self.normal_segments_resampled))
+        #print(len(self.abnormal_segments_resampled))
+        #fig = self.plot_resampled()
+        #fig.show()
 
 
 

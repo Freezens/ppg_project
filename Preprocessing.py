@@ -39,7 +39,7 @@ peaks가 5개 이상 찾아지지 않는 경우 None을 반환하고 훈련에 �
 
 """
 
-def peaks_find(arr, Block_size = 10, prominence = 0.5):
+def peaks_find(arr, Block_size = 10, prominence = 3):
     max_in_block = [(0, arr[0], arr[0])]
     peaks = []
     for i in range(1, len(arr), Block_size):
@@ -57,11 +57,7 @@ def peaks_find(arr, Block_size = 10, prominence = 0.5):
             if max_in_block[i][0]>=3:
                 peaks.append((max_in_block[i][0], max_in_block[i][1]))
 
-    if len(peaks) >= 5:
-        peaks = sorted(peaks, key=lambda x: x[1], reverse=True)[:5]
-        return peaks
-
-    else: return None
+    return peaks
 
 
 # Train data set 시각화 클래스. 해당 클래스의 run() 함수 사용.
@@ -80,7 +76,7 @@ class TrainDataSet_Visualize:
 
     # peaks 찾기 및 총 peaks 수 출력 (나중에 완성되면 지울 것)
     def find_peaks(self):
-        self.peaks = [peaks_find(arr, 5) for arr in self.flatten_data]
+        self.peaks = [peaks_find(arr, 10) for arr in self.flatten_data]
         print(sum(len(peaks) for peaks in self.peaks))
 
     # 시각화 함수
