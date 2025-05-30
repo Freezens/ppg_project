@@ -1,12 +1,11 @@
-#필터 16개
-import ppgcnn
-import ppgfft
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import load_model
 
 # 0. 모델 불러오기
-model_cnn = ppgcnn.model
-model_fft = ppgfft.model
+model_cnn = load_model("cnn_lstm_model.h5")
+model_fft = load_model("fft_model.h5")
+
 
 # 1. 테스트 데이터 불러오기
 test_n = np.load('normal_test_data.npy')      # 정상 샘플
@@ -27,5 +26,4 @@ y_pred_prob_fft = model_fft.predict(X_test_scaled)
 y_pred_cnn = (y_pred_prob_cnn >= 0.96).astype(int).flatten()
 y_pred_fft = (y_pred_prob_fft >= 0.5).astype(int).flatten()
 
-print (y_pred_prob_cnn)
-print (y_pred_prob_fft)
+

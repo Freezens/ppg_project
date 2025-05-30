@@ -7,7 +7,7 @@ abnormal = np.load("resampled_abnormal.npy")
 normal = np.load("resampled_normal.npy")
 
 # FFT 함수
-def apply_fft(data, n_fft=None):
+def apply_fft(data, n_fft=200):
     if n_fft is None:
         n_fft = data.shape[1]
     fft_data = np.abs(np.fft.fft(data, n=n_fft))
@@ -35,7 +35,7 @@ from tensorflow.keras.layers import Conv1D, MaxPooling1D, GlobalAveragePooling1D
 
 # 모델 정의
 model = Sequential([
-    Conv1D(64, 3, activation='relu', input_shape=(X_scaled.shape[1], 1)),
+    Conv1D(64, 3, activation='relu', input_shape=(100, 1)),
     BatchNormalization(),
     MaxPooling1D(2),
     Conv1D(128, 3, activation='relu'),
