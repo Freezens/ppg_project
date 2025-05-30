@@ -9,6 +9,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Layer, Dense, Dropout, Conv1D, GlobalMaxPooling1D, BatchNormalization
 import random
 
+random.seed(42)
+
 class SelfAttention1D(Layer):
     def __init__(self, **kwargs):
         super(SelfAttention1D, self).__init__(**kwargs)
@@ -39,16 +41,18 @@ weight_cnn = 1.8
 weight_fft = 2 - weight_cnn
 
 # 1. 테스트 데이터 불러오기
-test_n = np.load('normal_test_data.npy')      # 정상 샘플
-test_abn = np.load('abnormal_test_data.npy')  # 이상 샘플
+test_n = np.load('resampled_normal.npy')      # 정상 샘플
+test_abn = np.load('resampled_abnormal.npy')  # 이상 샘플
 
-num_abn = len(test_abn)
-indices = np.random.choice(len(test_n), num_abn, replace=False)
-test_n_sampled = test_n[indices]
+indices = list(range(len(test_abn)))
+test_abn_indices = random.sample(indices, 500)
+
+test_abn_500 = test_abn[test_abn_indices]
+train_abn = np.delete(test_abn, test_abn_indices, axis=0)
 
 # 2. X, y 구성
-X_test = np.concatenate([test_n_sampled, test_abn], axis=0)
-y_test = np.array([0]*len(test_n_sampled) + [1]*len(test_abn))
+X_test = np.concatenate([test_n, train_abn], axis=0)
+y_test = np.array([0]*len(test_n) + [1]*len(train_abn))  # 0: 정상, 1: 이상
 
 # 3. 전처리: 정규화 및 reshape
 scaler = MinMaxScaler()
@@ -147,3 +151,64 @@ f1 = f1_score(y_test, y_meta_pred)
 recall = recall_score(y_test, y_meta_pred)
 print(f"Meta-Model F1 Score: {f1:.4f}")
 print(f"Meta-Model Recall: {recall:.4f}")
+
+
+
+
+
+
+
+test_n = np.load('normal_test_data.npy')      # 정상 테스트 샘플
+test_abn = np.load('abnormal_test_data.npy')  # 비정상 테스트 샘플
+
+test_abn = np.concatenate([test_abn, test_abn_500], axis=0)
+X_test = np.concatenate([test_n, test_abn], axis=0)
+y_test = np.array([0]*len(test_n) + [1]*len(test_abn))
+
+# --- 전처리: 정규화 및 reshape ---
+scaler = MinMaxScaler()
+X_test_scaled = np.array([scaler.fit_transform(x.reshape(-1, 1)).flatten() for x in X_test])
+X_test_scaled = X_test_scaled.reshape(-1, 100, 1)  # shape 맞추기
+
+# --- 개별 모델 예측 ---
+y_pred_prob_cnn = model_cnn.predict(X_test_scaled)
+y_pred_prob_fft = model_fft.predict(X_test_scaled)
+
+# --- 메타 모델 입력 생성 ---
+combined_input = np.hstack([weight_cnn * y_pred_prob_cnn, weight_fft * y_pred_prob_fft])  # (샘플 수, 2)
+X_meta_all = combined_input.reshape(-1, 1, 2)
+
+# --- 메타 모델 예측 ---
+y_meta_prob = meta_model.predict(X_meta_all).flatten()
+
+# --- F1, Recall 계산 ---
+max_prob = np.max(y_meta_prob)
+threshold = max_prob * 0.9
+y_meta_pred = (y_meta_prob >= threshold).astype(int)
+
+f1 = f1_score(y_test, y_meta_pred)
+recall = recall_score(y_test, y_meta_pred)
+print(f"Meta-Model F1 Score: {f1:.4f}")
+print(f"Meta-Model Recall: {recall:.4f}")
+
+# --- 확률 히스토그램 시각화 ---
+n0, bins0, _ = plt.hist(y_meta_prob[y_test == 0], bins=100, alpha=0.5, label='Normal (0)', color='green')
+n1, bins1, _ = plt.hist(y_meta_prob[y_test == 1], bins=100, alpha=0.5, label='Abnormal (1)', color='red')
+
+for i in range(len(n0)):
+    if n0[i] > 0:
+        plt.text((bins0[i] + bins0[i+1]) / 2, n0[i], str(int(n0[i])), ha='center', va='bottom', fontsize=8, color='green')
+
+for i in range(len(n1)):
+    if n1[i] > 0:
+        plt.text((bins1[i] + bins1[i+1]) / 2, n1[i], str(int(n1[i])), ha='center', va='bottom', fontsize=8, color='red')
+
+plt.title("Histogram of Predicted Probabilities by Class")
+plt.xlabel("Predicted Probability")
+plt.ylabel("Frequency")
+plt.legend()
+plt.grid(True)
+plt.xlim(0, 1)
+plt.xticks(np.linspace(0, 1, 21))
+plt.tight_layout()
+plt.show()
