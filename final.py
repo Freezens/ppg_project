@@ -26,3 +26,6 @@ y_pred_prob_fft = model_fft.predict(X_test_scaled)
 
 y_pred_cnn = (y_pred_prob_cnn >= 0.96).astype(int).flatten()
 y_pred_fft = (y_pred_prob_fft >= 0.5).astype(int).flatten()
+
+print (y_pred_prob_cnn)
+print (y_pred_prob_fft)

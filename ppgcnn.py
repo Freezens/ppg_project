@@ -47,7 +47,7 @@ describe_dataset(X_val, "Validation")
 # 5. 모델 설계
 model = Sequential([
     # CNN: 주파수 패턴
-    Conv1D(filters=64, kernel_size=5, activation='relu', input_shape=(100, 1)),
+    Conv1D(filters=64, kernel_size=9, activation='relu', input_shape=(100, 1)),
     MaxPooling1D(pool_size=2),
     Dropout(0.3),
     # LSTM: 리듬의 순서 정보
@@ -60,7 +60,7 @@ model = Sequential([
 model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
 # 6. 학습
-model.fit(X_train, y_train, epochs=30, batch_size=32, validation_data=(X_val, y_val))
+model.fit(X_train, y_train, epochs=15, batch_size=32, validation_data=(X_val, y_val))
 
 # 7. 성능 평가
 loss, acc = model.evaluate(X_val, y_val)
@@ -182,3 +182,7 @@ plt.xticks(np.linspace(0, 1, 21))  # 0.0 ~ 1.0 사이 눈금
 
 plt.tight_layout()
 plt.show()
+
+model.save("cnn_lstm_model.h5")
+
+print (y_pred_prob)
