@@ -183,6 +183,6 @@ plt.xticks(np.linspace(0, 1, 21))  # 0.0 ~ 1.0 사이 눈금
 plt.tight_layout()
 plt.show()
 
-model.save("cnn_lstm_model.h5")
+#model.save("cnn_lstm_model.h5")
 
 #print (y_pred_prob)

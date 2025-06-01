@@ -219,15 +219,31 @@ print(f"Precision: {precision:.4f}")
 print(f"Recall: {recall:.4f}")
 print(f"F1 Score: {f1:.4f}")
 # 클래스별 확률 분포
-plt.figure(figsize=(8, 4))
+# 히스토그램 직접 변수로 저장 (정상 클래스)
+n0, bins0, _ = plt.hist(y_pred_prob[y_test == 0], bins=100, alpha=0.5, label='Normal (0)', color='green')
 
-plt.hist(y_pred_prob[y_test == 0], bins=100, alpha=0.5, label='Normal (0)', color='green')
-plt.hist(y_pred_prob[y_test == 1], bins=100, alpha=0.5, label='Abnormal (1)', color='red')
+# 이상 클래스
+n1, bins1, _ = plt.hist(y_pred_prob[y_test == 1], bins=100, alpha=0.5, label='Abnormal (1)', color='red')
 
+# 숫자 표기 (빈도 수)
+for i in range(len(n0)):
+    if n0[i] > 0:
+        plt.text((bins0[i] + bins0[i+1]) / 2, n0[i], str(int(n0[i])), ha='center', va='bottom', fontsize=8, color='green')
+
+for i in range(len(n1)):
+    if n1[i] > 0:
+        plt.text((bins1[i] + bins1[i+1]) / 2, n1[i], str(int(n1[i])), ha='center', va='bottom', fontsize=8, color='red')
+
+# 스타일 및 라벨
 plt.title("Histogram of Predicted Probabilities by Class")
 plt.xlabel("Predicted Probability")
 plt.ylabel("Frequency")
 plt.legend()
 plt.grid(True)
+plt.xlim(0, 1)
+plt.xticks(np.linspace(0, 1, 21))  # 0.0 ~ 1.0 사이 눈금
+
+plt.tight_layout()
 plt.show()
-model.save("fft_model.h5")
+
+#model.save("fft_model.h5")
