@@ -37,8 +37,8 @@ class SelfAttention1D(Layer):
 model_cnn = load_model("cnn_lstm_model.h5")
 model_fft = load_model("fft_model.h5")
 
-weight_cnn = 1.8
-weight_fft = 2 - weight_cnn
+weight_cnn = 1.7
+weight_fft = 0.3 - weight_cnn
 
 # 1. 테스트 데이터 불러오기
 test_n = np.load('resampled_normal.npy')      # 정상 샘플
