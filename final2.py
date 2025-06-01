@@ -54,6 +54,7 @@ train_abn = np.delete(test_abn, test_abn_indices, axis=0)
 X_test = np.concatenate([test_n, train_abn], axis=0)
 y_test = np.array([0]*len(test_n) + [1]*len(train_abn))  # 0: 정상, 1: 이상
 
+print (X_test.shape)
 # 3. 전처리: 정규화 및 reshape
 scaler = MinMaxScaler()
 X_test_scaled = np.array([scaler.fit_transform(x.reshape(-1, 1)).flatten() for x in X_test])
