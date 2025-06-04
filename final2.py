@@ -73,11 +73,12 @@ X_meta_train, X_meta_val, y_meta_train, y_meta_val = train_test_split(
     X_meta_all, y_test, test_size=0.2, random_state=42
 )
 
+print (X_meta_all.shape)
 # 7. 메타 모델 정의
 meta_model = Sequential([
     Conv1D(64, kernel_size=1, activation='relu', input_shape=(1, 2)),
     BatchNormalization(),
-    SelfAttention1D(), 
+    #SelfAttention1D(), 
     GlobalMaxPooling1D(),
     Dense(32, activation='relu'),
     Dropout(0.3),
@@ -86,7 +87,7 @@ meta_model = Sequential([
 
 # 8. 훈련
 meta_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-meta_model.fit(X_meta_train, y_meta_train, epochs=20, batch_size=8, verbose=1)
+meta_model.fit(X_meta_train, y_meta_train, epochs=2, batch_size=8, verbose=1)
 
 # 9. 평가
 loss, acc = meta_model.evaluate(X_meta_val, y_meta_val)
@@ -213,3 +214,8 @@ plt.xlim(0, 1)
 plt.xticks(np.linspace(0, 1, 21))
 plt.tight_layout()
 plt.show()
+
+from tensorflow.keras.utils import plot_model
+
+plot_model(meta_model, to_file='meta_model.svg', show_shapes=True, show_layer_names=True)
+
