@@ -78,7 +78,7 @@ print (X_meta_all.shape)
 meta_model = Sequential([
     Conv1D(64, kernel_size=1, activation='relu', input_shape=(1, 2)),
     BatchNormalization(),
-    #SelfAttention1D(), 
+    SelfAttention1D(), 
     GlobalMaxPooling1D(),
     Dense(32, activation='relu'),
     Dropout(0.3),
@@ -87,7 +87,7 @@ meta_model = Sequential([
 
 # 8. 훈련
 meta_model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-meta_model.fit(X_meta_train, y_meta_train, epochs=2, batch_size=8, verbose=1)
+meta_model.fit(X_meta_train, y_meta_train, epochs=20, batch_size=8, verbose=1)
 
 # 9. 평가
 loss, acc = meta_model.evaluate(X_meta_val, y_meta_val)
@@ -215,7 +215,23 @@ plt.xticks(np.linspace(0, 1, 21))
 plt.tight_layout()
 plt.show()
 
-from tensorflow.keras.utils import plot_model
+from sklearn.metrics import (
+    confusion_matrix, ConfusionMatrixDisplay,
+    precision_score, recall_score, f1_score,
+    roc_curve, auc
+)
 
-plot_model(meta_model, to_file='meta_model.svg', show_shapes=True, show_layer_names=True)
+# --- 혼동 행렬 및 정밀도/재현율/F1 점수 ---
+cm = confusion_matrix(y_test, y_meta_pred)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Normal (0)", "Abnormal (1)"])
+disp.plot(cmap=plt.cm.Blues, values_format='d')
+plt.title("Confusion Matrix (Meta Model)")
+plt.grid(False)
+plt.tight_layout()
+plt.show()
 
+# --- 정밀도 계산 및 출력 ---
+precision = precision_score(y_test, y_meta_pred)
+print(f"Meta-Model Precision: {precision:.4f}")
+print(f"Meta-Model Recall: {recall:.4f}")
+print(f"Meta-Model F1 Score: {f1:.4f}")
